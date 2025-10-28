@@ -111,8 +111,9 @@ const Sidebar = ({ currentSection, onSectionChange, isMobileOpen, onMobileClose 
 };
 
 // Header Component
-const Header = ({ title, onSidebarToggle }) => {
+const Header = ({ title, onSidebarToggle, onResetData }) => {
   const [currentDate, setCurrentDate] = useState('');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
     const now = new Date();
@@ -146,9 +147,31 @@ const Header = ({ title, onSidebarToggle }) => {
             <span>🔔</span>
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
           </button>
-          <button className="p-2 rounded-lg hover:bg-gray-700">
-            <span>⚙️</span>
-          </button>
+          
+          {/* ✅ TAMBAHKAN INI - Tombol Settings dengan Dropdown */}
+          <div className="relative">
+            <button 
+              onClick={() => setShowResetConfirm(!showResetConfirm)}
+              className="p-2 rounded-lg hover:bg-gray-700"
+            >
+              <span>⚙️</span>
+            </button>
+            
+            {showResetConfirm && (
+              <div className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-lg shadow-lg p-2 z-50">
+                <button
+                  onClick={() => {
+                    onResetData();
+                    setShowResetConfirm(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-red-600 rounded flex items-center space-x-2 text-red-400 hover:text-white transition-colors"
+                >
+                  <span>🔄</span>
+                  <span>Reset Data</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
@@ -689,8 +712,25 @@ const AnalyticsPage = () => (
 export default function App() {
   const [currentSection, setCurrentSection] = useState('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [tasks, setTasks] = useState(initialTasks);
-  const [notes, setNotes] = useState(initialNotes);
+  
+  // ✅ TASKS dengan Local Storage
+  const [tasks, setTasks] = useState(() => {
+    const savedTasks = localStorage.getItem('taskflow-tasks');
+    if (savedTasks) {
+      return JSON.parse(savedTasks);
+    }
+    return initialTasks;
+  });
+  
+  // ✅ NOTES dengan Local Storage
+  const [notes, setNotes] = useState(() => {
+    const savedNotes = localStorage.getItem('taskflow-notes');
+    if (savedNotes) {
+      return JSON.parse(savedNotes);
+    }
+    return initialNotes;
+  });
+  
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showAddNoteModal, setShowAddNoteModal] = useState(false);
 
@@ -701,6 +741,19 @@ export default function App() {
     notes: 'Catatan',
     analytics: 'Analitik'
   };
+
+  // ✅ TAMBAHKAN INI - Auto-save tasks ke Local Storage
+  useEffect(() => {
+    localStorage.setItem('taskflow-tasks', JSON.stringify(tasks));
+    console.log('💾 Tasks saved to Local Storage:', tasks.length, 'tasks');
+  }, [tasks]); // Jalan setiap kali tasks berubah
+
+  // ✅ TAMBAHKAN INI - Auto-save notes ke Local Storage
+  useEffect(() => {
+    localStorage.setItem('taskflow-notes', JSON.stringify(notes));
+    console.log('💾 Notes saved to Local Storage:', notes.length, 'notes');
+  }, [notes]); // Jalan setiap kali notes berubah
+
 
   const handleAddTask = (taskData) => {
     const newTask = {
@@ -749,6 +802,17 @@ export default function App() {
   const handleDeleteNote = (noteId) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus catatan ini?')) {
       setNotes(notes.filter(note => note.id !== noteId));
+    }
+  };
+
+  // ✅ TAMBAHKAN INI - Fungsi Reset Data
+  const handleResetData = () => {
+    if (window.confirm('⚠️ Ini akan menghapus SEMUA data dan kembali ke data awal. Yakin?')) {
+      localStorage.removeItem('taskflow-tasks');
+      localStorage.removeItem('taskflow-notes');
+      setTasks(initialTasks);
+      setNotes(initialNotes);
+      alert('✅ Data berhasil di-reset!');
     }
   };
 
@@ -801,7 +865,8 @@ export default function App() {
         <Header 
           title={sectionTitles[currentSection]}
           onSidebarToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-        />
+          onResetData={handleResetData}
+        /> {/* ← TAMBAH onResetData */}
         
         <main className="flex-1 overflow-auto">
           {renderSection()}
@@ -832,3 +897,4 @@ export default function App() {
     </div>
   );
 }
+
