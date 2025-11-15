@@ -656,14 +656,290 @@ const AddNoteForm = ({ onSubmit, onCancel }) => {
 };
 
 // Calendar & Analytics placeholders
-const CalendarPage = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-bold mb-6">Kalender</h2>
-    <div className="bg-gray-800 p-6 rounded-xl">
-      <p className="text-gray-400">Kalender akan segera hadir...</p>
+// Ganti komponen CalendarPage yang lama dengan kode ini:
+
+const CalendarPage = ({ tasks }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedTasks, setSelectedTasks] = useState([]);
+
+  const monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+
+  const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+  // Navigasi bulan
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  // Generate kalender days
+  const getCalendarDays = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    // Hari pertama bulan ini
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Mulai dari minggu pertama (termasuk hari dari bulan sebelumnya)
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+    const days = [];
+    const totalDays = 42; // 6 minggu × 7 hari
+
+    for (let i = 0; i < totalDays; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      days.push(date);
+    }
+
+    return days;
+  };
+
+  // Cek apakah tanggal sama
+  const isSameDay = (date1, date2) => {
+    return date1.getDate() === date2.getDate() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getFullYear() === date2.getFullYear();
+  };
+
+  // Get tasks untuk tanggal tertentu
+  const getTasksForDate = (date) => {
+    const dateString = date.toISOString().split('T')[0];
+    return tasks.filter(task => task.deadline === dateString);
+  };
+
+  // Handle klik tanggal
+  const handleDateClick = (date) => {
+    setSelectedDate(date);
+    setSelectedTasks(getTasksForDate(date));
+  };
+
+  const calendarDays = getCalendarDays();
+  const today = new Date();
+
+  return (
+    <div className="p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Kalender Grid */}
+        <div className="lg:col-span-2">
+          <div className="bg-gray-800 p-6 rounded-xl">
+            {/* Header Kalender */}
+            <div className="flex items-center justify-between mb-6">
+              <button
+                onClick={goToPreviousMonth}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                ◀
+              </button>
+
+              <div className="text-center">
+                <h3 className="text-xl font-semibold">
+                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                </h3>
+                <button
+                  onClick={goToToday}
+                  className="text-sm text-blue-400 hover:text-blue-300 mt-1"
+                >
+                  Hari Ini
+                </button>
+              </div>
+
+              <button
+                onClick={goToNextMonth}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                ▶
+              </button>
+            </div>
+
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 gap-2 mb-2">
+              {dayNames.map(day => (
+                <div
+                  key={day}
+                  className="text-center text-gray-400 font-semibold text-sm py-2"
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-2">
+              {calendarDays.map((date, index) => {
+                const isToday = isSameDay(date, today);
+                const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+                const isSelected = selectedDate && isSameDay(date, selectedDate);
+                const dayTasks = getTasksForDate(date);
+                const hasTasks = dayTasks.length > 0;
+
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleDateClick(date)}
+                    className={`
+                      relative p-2 min-h-[60px] rounded-lg text-sm transition-all
+                      ${isToday ? 'bg-blue-600 text-white font-bold' : ''}
+                      ${isSelected ? 'ring-2 ring-blue-400' : ''}
+                      ${!isCurrentMonth ? 'text-gray-600' : 'text-white'}
+                      ${!isToday && !isSelected ? 'hover:bg-gray-700' : ''}
+                      ${hasTasks ? 'border-l-2 border-green-400' : ''}
+                    `}
+                  >
+                    <div className="flex flex-col items-center">
+                      <span>{date.getDate()}</span>
+                      
+                      {/* Task Indicators */}
+                      {hasTasks && (
+                        <div className="flex gap-1 mt-1">
+                          {dayTasks.slice(0, 3).map((task, i) => (
+                            <div
+                              key={i}
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                task.status === 'completed' ? 'bg-green-400' :
+                                task.status === 'in-progress' ? 'bg-blue-400' :
+                                'bg-yellow-400'
+                              }`}
+                            />
+                          ))}
+                          {dayTasks.length > 3 && (
+                            <span className="text-xs text-gray-400">+{dayTasks.length - 3}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="mt-6 flex flex-wrap gap-4 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-600 rounded"></div>
+                <span className="text-gray-400">Hari Ini</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                <span className="text-gray-400">Pending</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                <span className="text-gray-400">Progress</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                <span className="text-gray-400">Selesai</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Task Details Sidebar */}
+        <div className="bg-gray-800 p-6 rounded-xl">
+          <h3 className="text-lg font-semibold mb-4">
+            {selectedDate 
+              ? `${selectedDate.getDate()} ${monthNames[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`
+              : 'Pilih Tanggal'
+            }
+          </h3>
+
+          {selectedDate ? (
+            selectedTasks.length > 0 ? (
+              <div className="space-y-3">
+                {selectedTasks.map(task => (
+                  <div
+                    key={task.id}
+                    className={`p-3 rounded-lg border-l-4 ${
+                      task.priority === 'high' ? 'border-red-400' :
+                      task.priority === 'medium' ? 'border-yellow-400' :
+                      'border-green-400'
+                    } bg-gray-700`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className={`font-medium text-sm ${
+                          task.status === 'completed' ? 'line-through text-gray-400' : ''
+                        }`}>
+                          {task.title}
+                        </h4>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {task.description}
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            task.status === 'completed' ? 'bg-green-500' :
+                            task.status === 'in-progress' ? 'bg-blue-500' :
+                            'bg-yellow-500'
+                          }`}>
+                            {task.status === 'completed' ? 'Selesai' :
+                             task.status === 'in-progress' ? 'Progress' :
+                             'Pending'}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {task.category}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-400 py-8">
+                <span className="text-4xl mb-2 block">📅</span>
+                <p>Tidak ada tugas di tanggal ini</p>
+              </div>
+            )
+          ) : (
+            <div className="text-center text-gray-400 py-8">
+              <span className="text-4xl mb-2 block">👆</span>
+              <p>Klik tanggal untuk melihat tugas</p>
+            </div>
+          )}
+
+          {/* Quick Stats */}
+          {selectedDate && selectedTasks.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-700">
+              <h4 className="text-sm font-semibold mb-3">Ringkasan</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Total Tugas</span>
+                  <span className="font-semibold">{selectedTasks.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Selesai</span>
+                  <span className="text-green-400 font-semibold">
+                    {selectedTasks.filter(t => t.status === 'completed').length}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Pending</span>
+                  <span className="text-yellow-400 font-semibold">
+                    {selectedTasks.filter(t => t.status === 'pending').length}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const AnalyticsPage = () => (
   <div className="p-6">
@@ -817,41 +1093,40 @@ export default function App() {
   };
 
   const renderSection = () => {
-    switch (currentSection) {
-      case 'dashboard':
-        return (
-          <Dashboard 
-            tasks={tasks}
-            onShowAddTask={() => setShowAddTaskModal(true)}
-            onShowAddNote={() => setShowAddNoteModal(true)}
-          />
-        );
-      case 'tasks':
-        return (
-          <TasksPage 
-            tasks={tasks}
-            onShowAddTask={() => setShowAddTaskModal(true)}
-            onToggleStatus={handleToggleTaskStatus}
-            onDeleteTask={handleDeleteTask}
-          />
-        );
-      case 'notes':
-        return (
-          <NotesPage 
-            notes={notes}
-            onShowAddNote={() => setShowAddNoteModal(true)}
-            onDeleteNote={handleDeleteNote}
-          />
-        );
-      case 'calendar':
-        return <CalendarPage />;
-      case 'analytics':
-        return <AnalyticsPage />;
-      default:
-        return <Dashboard tasks={tasks} />;
-    }
-  };
-
+  switch (currentSection) {
+    case 'dashboard':
+      return (
+        <Dashboard 
+          tasks={tasks}
+          onShowAddTask={() => setShowAddTaskModal(true)}
+          onShowAddNote={() => setShowAddNoteModal(true)}
+        />
+      );
+    case 'tasks':
+      return (
+        <TasksPage 
+          tasks={tasks}
+          onShowAddTask={() => setShowAddTaskModal(true)}
+          onToggleStatus={handleToggleTaskStatus}
+          onDeleteTask={handleDeleteTask}
+        />
+      );
+    case 'notes':
+      return (
+        <NotesPage 
+          notes={notes}
+          onShowAddNote={() => setShowAddNoteModal(true)}
+          onDeleteNote={handleDeleteNote}
+        />
+      );
+    case 'calendar':
+      return <CalendarPage tasks={tasks} />; // ← TAMBAH tasks
+    case 'analytics':
+      return <AnalyticsPage />;
+    default:
+      return <Dashboard tasks={tasks} />;
+  }
+};
   return (
     <div className="flex h-screen bg-gray-900 text-white">
       <Sidebar 
